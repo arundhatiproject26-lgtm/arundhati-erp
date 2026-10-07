@@ -102,12 +102,8 @@ function parseGrid(grid: Grid): PunchRow[] {
       continue;
     }
 
-    const deptIdx = labels.indexOf('department');
-    if (deptIdx !== -1) {
-      department = String(labelValue(row, deptIdx) ?? '').trim() || null;
-      continue;
-    }
-
+    // A header row is checked before label rows: some exports put a
+    // Department column in the header, which must not read as a label row.
     const codeIdx = labels.findIndex((l) => l === 'ecode' || l === 'empcode' || l === 'employeecode');
     if (codeIdx !== -1 && labels.includes('name')) {
       cols = {
@@ -117,7 +113,14 @@ function parseGrid(grid: Grid): PunchRow[] {
         in: labels.findIndex((l) => l === 'intime' || l === 'punchin'),
         out: labels.findIndex((l) => l === 'outtime' || l === 'punchout'),
         status: labels.indexOf('status'),
+        dept: labels.indexOf('department'),
       };
+      continue;
+    }
+
+    const deptIdx = labels.indexOf('department');
+    if (deptIdx !== -1) {
+      department = String(labelValue(row, deptIdx) ?? '').trim() || null;
       continue;
     }
 
@@ -135,7 +138,7 @@ function parseGrid(grid: Grid): PunchRow[] {
       punch_in: cols.in === -1 ? null : asTime(row[cols.in]),
       punch_out: cols.out === -1 ? null : asTime(row[cols.out]),
       status: cols.status === -1 ? null : cleanStatus(row[cols.status]),
-      department,
+      department: cols.dept !== -1 ? String(row[cols.dept] ?? '').trim() || department : department,
     });
   }
 

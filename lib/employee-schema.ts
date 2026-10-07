@@ -23,4 +23,4 @@ export const EmployeeInput = z.object({
 });
 export type EmployeeInput = z.infer<typeof EmployeeInput>;
 
-export const CURRENT_STATUSES = ['active', 'on-leave'] as const;
+export { CURRENT_STATUSES } from '@/lib/access';

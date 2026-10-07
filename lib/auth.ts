@@ -3,7 +3,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify, createRemoteJWKSet, type JWTVerifyGetKey } from 'jose';
 import { db } from '@/lib/db';
-import { ROLE_ORDER, type Role } from '@/lib/roles';
+import type { Role } from '@/lib/roles';
+import { canAutoLink, effectiveAccess } from '@/lib/access';
 
 export type { Role };
 
@@ -16,6 +17,7 @@ export interface MeEmployee {
   department: string | null;
   designation: string | null;
   staff_type: string;
+  status: string;
 }
 
 export interface Me {
@@ -50,7 +52,7 @@ function getJwks(): { keys: JWTVerifyGetKey; issuer: string } {
   return { keys: jwks, issuer };
 }
 
-async function verifyToken(request: NextRequest): Promise<{ sub: string; email: string | null }> {
+async function verifyToken(request: NextRequest): Promise<{ sub: string; email: string | null; emailVerified: boolean }> {
   const header = request.headers.get('authorization');
   const token = header?.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) throw new HttpError(401, 'Unauthorized');
@@ -61,16 +63,20 @@ async function verifyToken(request: NextRequest): Promise<{ sub: string; email: 
       audience: process.env.COGNITO_APP_CLIENT_ID,
     });
     if (payload.token_use !== 'id' || typeof payload.sub !== 'string') throw new Error('not an id token');
-    return { sub: payload.sub, email: typeof payload.email === 'string' ? payload.email.toLowerCase() : null };
+    return {
+      sub: payload.sub,
+      email: typeof payload.email === 'string' ? payload.email.toLowerCase() : null,
+      emailVerified: payload.email_verified === true || payload.email_verified === 'true',
+    };
   } catch {
     throw new HttpError(401, 'Unauthorized');
   }
 }
 
-const EMPLOYEE_COLUMNS = ['id', 'full_name', 'email', 'employee_code', 'department', 'designation', 'staff_type'] as const;
+const EMPLOYEE_COLUMNS = ['id', 'full_name', 'email', 'employee_code', 'department', 'designation', 'staff_type', 'status'] as const;
 
 export async function getMe(request: NextRequest): Promise<Me> {
-  const { sub, email } = await verifyToken(request);
+  const { sub, email, emailVerified } = await verifyToken(request);
 
   const [roleRows, byId] = await Promise.all([
     db.selectFrom('user_roles').select(['role', 'department']).where('user_id', '=', sub).execute(),
@@ -78,9 +84,9 @@ export async function getMe(request: NextRequest): Promise<Me> {
   ]);
 
   let employee: MeEmployee | null = byId ?? null;
-  // HR may have added the employee before the login existed: match by email
-  // once and link it, so later lookups go by user_id.
-  if (!employee && email) {
+  // HR may have added the employee before the login existed: match by
+  // (verified) email once and link it, so later lookups go by user_id.
+  if (!employee && canAutoLink(email, emailVerified)) {
     const linked = await db
       .updateTable('employees')
       .set({ user_id: sub })
@@ -91,15 +97,8 @@ export async function getMe(request: NextRequest): Promise<Me> {
     employee = linked ?? null;
   }
 
-  const roles = new Set(roleRows.map((r) => r.role as Role));
-  if (employee) roles.add('staff');
-  return {
-    userId: sub,
-    email,
-    roles: ROLE_ORDER.filter((r) => roles.has(r)),
-    hodDepartment: roleRows.find((r) => r.role === 'hod')?.department ?? null,
-    employee,
-  };
+  // Resigned/terminated employees lose every portal, approver roles included.
+  return { userId: sub, email, ...effectiveAccess(roleRows, employee) };
 }
 
 export async function requireRole(request: NextRequest, role: Role): Promise<Me> {

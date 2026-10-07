@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "node --experimental-strip-types --no-warnings lib/leave-flow.check.ts && node --experimental-strip-types --no-warnings lib/hr-attendance.check.ts"
+    "check": "node --experimental-strip-types --no-warnings lib/leave-flow.check.ts && node --experimental-strip-types --no-warnings lib/hr-attendance.check.ts && node --experimental-strip-types --no-warnings lib/punch-sheet.check.ts && node --experimental-strip-types --no-warnings lib/access.check.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1116.0",

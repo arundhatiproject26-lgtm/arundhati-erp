@@ -55,4 +55,9 @@ assert.match(
   /2027/,
 );
 
+// Impossible calendar dates are a 400, never reach the DB (review Important #3)
+assert.match(checkRequest({ ...ok, from: '2026-02-31', to: '2026-02-31' })!, /valid date/i);
+assert.match(checkRequest({ ...ok, from: '2026-13-01', to: '2026-13-02' })!, /valid date/i);
+assert.match(checkRequest({ ...ok, available: new Map() , to: '2026-10-01' })!, /end date/i);
+
 console.log('leave-flow: all checks passed');

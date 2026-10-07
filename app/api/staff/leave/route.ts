@@ -40,9 +40,12 @@ export async function POST(request: NextRequest) {
     const b = parsed.data;
     if (b.is_half_day && !b.session) throw new HttpError(400, 'Choose forenoon or afternoon for a half day.');
 
+    const req = { type: b.leave_type, from: b.from_date, to: b.to_date, halfDay: b.is_half_day };
+    // Dates/type first (no balances): a bad range is a 400 before any query.
+    const shape = checkRequest({ ...req, available: new Map() });
+    if (shape) throw new HttpError(400, shape);
     const years = [...daysByYear(b.from_date, b.to_date, b.is_half_day).keys()];
-    const available = await availableFor(me.employee.id, b.leave_type, years);
-    const problem = checkRequest({ type: b.leave_type, from: b.from_date, to: b.to_date, halfDay: b.is_half_day, available });
+    const problem = checkRequest({ ...req, available: await availableFor(me.employee.id, b.leave_type, years) });
     if (problem) throw new HttpError(400, problem);
     if (await overlapsExisting(me.employee.id, b.from_date, b.to_date)) {
       throw new HttpError(409, 'You already have leave on one of these dates.');

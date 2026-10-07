@@ -84,6 +84,13 @@ export function canDecide(i: DecideInput): string | null {
 const norm = (s: string | null) => (s ?? '').trim().toLowerCase();
 
 const DAY_MS = 86_400_000;
+
+/** YYYY-MM-DD that exists on the calendar (rejects 2026-02-31, 2026-13-01). */
+export function isRealDate(d: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const t = Date.parse(`${d}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d;
+}
 const parse = (d: string) => Date.parse(`${d}T00:00:00Z`);
 
 /** Calendar days a request covers; a half day is 0.5. */
@@ -121,7 +128,7 @@ export interface RequestInput {
 /** Why this request cannot be filed, or null when it can. Runs on form and server. */
 export function checkRequest(r: RequestInput): string | null {
   if (!(r.type in LEAVE_TYPES)) return 'Choose a valid leave type.';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(r.from) || !/^\d{4}-\d{2}-\d{2}$/.test(r.to)) return 'Choose start and end dates.';
+  if (!isRealDate(r.from) || !isRealDate(r.to)) return 'Choose a valid date.';
   if (r.to < r.from) return 'The end date is before the start date.';
   if (r.halfDay) {
     if (!HALF_DAY_TYPES.has(r.type)) return `A half day cannot be taken as ${LEAVE_TYPES[r.type as LeaveType]}.`;
