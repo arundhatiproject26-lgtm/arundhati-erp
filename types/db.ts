@@ -2,7 +2,11 @@
 import type { ColumnType, Generated } from 'kysely';
 
 type Numeric = ColumnType<string, string | number, string | number>;
-type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
+type Timestamp = ColumnType<Date, Date | string, Date | string>;
+// Columns with a DB default: optional on insert. (Generated<ColumnType<…>> does
+// not compose in Kysely, so these are spelled out.)
+type NumericDefault = ColumnType<string, string | number | undefined, string | number>;
+type TimestampDefault = ColumnType<Date, Date | string | undefined, Date | string>;
 
 export interface Employees {
   id: Generated<string>;
@@ -17,13 +21,13 @@ export interface Employees {
   status: Generated<string>;
   date_of_joining: string | null;
   phone: string | null;
-  basic_salary: Generated<Numeric>;
-  hra: Generated<Numeric>;
-  allowances: Generated<Numeric>;
-  pf_deduction: Generated<Numeric>;
-  tax_deduction: Generated<Numeric>;
-  created_at: Generated<Timestamp>;
-  updated_at: Generated<Timestamp>;
+  basic_salary: NumericDefault;
+  hra: NumericDefault;
+  allowances: NumericDefault;
+  pf_deduction: NumericDefault;
+  tax_deduction: NumericDefault;
+  created_at: TimestampDefault;
+  updated_at: TimestampDefault;
 }
 
 export interface UserRoles {
@@ -45,7 +49,7 @@ export interface StaffPunch {
   work_duration: string | null;
   overtime: string | null;
   total_duration: string | null;
-  created_at: Generated<Timestamp>;
+  created_at: TimestampDefault;
 }
 
 export interface StaffPunchDays {
@@ -87,7 +91,7 @@ export interface LeaveRequests {
   dean_by: string | null;
   dean_at: Timestamp | null;
   dean_remarks: string | null;
-  created_at: Generated<Timestamp>;
+  created_at: TimestampDefault;
 }
 
 export interface Regularizations {
@@ -101,7 +105,7 @@ export interface Regularizations {
   reviewed_by: string | null;
   reviewed_at: Timestamp | null;
   remarks: string | null;
-  created_at: Generated<Timestamp>;
+  created_at: TimestampDefault;
 }
 
 export interface Payslips {
@@ -109,16 +113,16 @@ export interface Payslips {
   employee_id: string;
   pay_month: number;
   pay_year: number;
-  basic_salary: Generated<Numeric>;
-  hra: Generated<Numeric>;
-  allowances: Generated<Numeric>;
-  incentive_total: Generated<Numeric>;
-  pf_deduction: Generated<Numeric>;
-  tax_deduction: Generated<Numeric>;
-  other_deductions: Generated<Numeric>;
-  net_pay: Generated<Numeric>;
+  basic_salary: NumericDefault;
+  hra: NumericDefault;
+  allowances: NumericDefault;
+  incentive_total: NumericDefault;
+  pf_deduction: NumericDefault;
+  tax_deduction: NumericDefault;
+  other_deductions: NumericDefault;
+  net_pay: NumericDefault;
   status: Generated<string>;
-  generated_at: Generated<Timestamp>;
+  generated_at: TimestampDefault;
   paid_at: Timestamp | null;
   remarks: string | null;
 }
